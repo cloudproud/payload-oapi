@@ -1,0 +1,30 @@
+{
+  "name": "payload-oai",
+  "version": "1.0.0",
+  "description": "Generate OpenAPI spec from Payload CMS collections",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
+  "files": [
+    "dist",
+    "*.js",
+    "*.d.ts"
+  ],
+  "keywords": [
+    "payload",
+    "cms",
+    "plugin",
+    "typescript",
+    "openapi"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.6.3",
+  "devDependencies": {
+    "openapi-types": "^12.1.3",
+    "payload": "^3.35.1"
+  }
+}
