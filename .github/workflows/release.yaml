@@ -19,6 +19,8 @@ jobs:
           version: 10.6.3
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm publish --access public --no-git-checks
+      - run: |
+          RELEASE_TAG=${GITHUB_REF#refs/tags/}
+          pnpm publish --access public --no-git-checks --tag "$RELEASE_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
