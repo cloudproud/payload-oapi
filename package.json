@@ -1,5 +1,5 @@
 {
-  "name": "payload-oai",
+  "name": "payload-oapi",
   "version": "1.0.0",
   "description": "Generate OpenAPI spec from Payload CMS collections",
   "main": "dist/index.js",
