@@ -78,10 +78,18 @@ type RefOptions = {
 type ComponentType = 'schemas' | 'responses' | 'requestBodies'
 
 function composeRef(
+  mode: 'new' | 'get',
   type: ComponentType,
   name: string,
   options?: RefOptions,
 ): v3_1.ReferenceObject {
+  if (mode === 'new') {
+    options = {
+      ...options,
+      prefix: 'new',
+    }
+  }
+
   return {
     $ref: `#/components/${type}/${componentName(name, options)}`,
   }
@@ -114,7 +122,7 @@ export const openapi = (options?: Options) => {
             description: 'successful operation',
             content: {
               'application/json': {
-                schema: composeRef('schemas', 'countResponse'),
+                schema: composeRef('get', 'schemas', 'countResponse'),
               }
             }
           }
@@ -171,13 +179,13 @@ function generateCustomEndpointOperators(document: v3_1.Document, base: string, 
     path[method] = {
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       },
       ...endpoint.custom,
     }
 
     if (method == 'post' || method == 'patch' || method == 'put') {
-      path[method]!.requestBody = composeRef('requestBodies', slug)
+      path[method]!.requestBody = composeRef('get', 'requestBodies', slug)
     }
 
     document.paths![`/api/${slug}${endpoint.path}`] = path
@@ -215,7 +223,7 @@ function generateUploadCollectionOperators(document: v3_1.Document, collection: 
     description: 'successful operation',
     content: {
       'application/json': {
-        schema: composeRef('schemas', collection.slug),
+        schema: composeRef('get', 'schemas', collection.slug),
       }
     }
   }
@@ -239,7 +247,7 @@ function generateUploadCollectionOperators(document: v3_1.Document, collection: 
     description: 'successful operation',
     content: {
       'application/json': {
-        schema: composeRef('schemas', collection.slug),
+        schema: composeRef('get', 'schemas', collection.slug),
       }
     }
   }
@@ -256,11 +264,11 @@ function generateUploadCollectionOperators(document: v3_1.Document, collection: 
               properties: {
                 docs: {
                   type: 'array',
-                  items: composeRef('schemas', slug),
+                  items: composeRef('get', 'schemas', slug),
                 },
               },
             },
-            composeRef('schemas', 'paginationResponse'),
+            composeRef('get', 'schemas', 'paginationResponse'),
           ],
         }
       }
@@ -271,9 +279,9 @@ function generateUploadCollectionOperators(document: v3_1.Document, collection: 
     post: {
       operationId: componentName(slug, { prefix: 'upload' }),
       tags: [slug],
-      requestBody: composeRef('requestBodies', slug, { prefix: 'upload' }),
+      requestBody: composeRef('get', 'requestBodies', slug, { prefix: 'upload' }),
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     },
     get: {
@@ -284,7 +292,7 @@ function generateUploadCollectionOperators(document: v3_1.Document, collection: 
       operationId: componentName(slug, { prefix: 'find' }),
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug, { suffix: 'list' }),
+        200: composeRef('get', 'responses', slug, { suffix: 'list' }),
       }
     },
   }
@@ -305,22 +313,22 @@ function generateUploadCollectionOperators(document: v3_1.Document, collection: 
       operationId: componentName(slug, { prefix: 'findById' }),
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     },
     patch: {
       operationId: componentName(slug, { prefix: 'updateById' }),
       tags: [slug],
-      requestBody: composeRef('requestBodies', slug),
+      requestBody: composeRef('get', 'requestBodies', slug),
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     },
     delete: {
       operationId: componentName(slug, { prefix: 'deleteById' }),
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     }
   }
@@ -331,7 +339,7 @@ function generateUploadCollectionOperators(document: v3_1.Document, collection: 
       operationId: componentName(collection.slug, { prefix: 'count' }),
       tags: [collection.slug],
       responses: {
-        200: composeRef('responses', 'count'),
+        200: composeRef('get', 'responses', 'count'),
       }
     },
   }
@@ -360,7 +368,7 @@ function generateGlobalOperators(document: v3_1.Document, global: GlobalConfig) 
     description: 'successful operation',
     content: {
       'application/json': {
-        schema: composeRef('schemas', slug, { prefix: 'global' }),
+        schema: composeRef('get', 'schemas', slug, { prefix: 'global' }),
       }
     }
   }
@@ -369,7 +377,7 @@ function generateGlobalOperators(document: v3_1.Document, global: GlobalConfig) 
     description: 'successful operation',
     content: {
       'application/json': {
-        schema: composeRef('schemas', slug, { prefix: 'global' }),
+        schema: composeRef('get', 'schemas', slug, { prefix: 'global' }),
       }
     }
   }
@@ -383,15 +391,15 @@ function generateGlobalOperators(document: v3_1.Document, global: GlobalConfig) 
       operationId: componentName(slug, { prefix: 'get' }),
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug, { prefix: 'global' }),
+        200: composeRef('get', 'responses', slug, { prefix: 'global' }),
       }
     },
     post: {
       operationId: componentName(slug, { prefix: 'update' }),
       tags: [slug],
-      requestBody: composeRef('requestBodies', slug, { prefix: 'global' }),
+      requestBody: composeRef('get', 'requestBodies', slug, { prefix: 'global' }),
       responses: {
-        200: composeRef('responses', slug, { prefix: 'global' }),
+        200: composeRef('get', 'responses', slug, { prefix: 'global' }),
       }
     },
   }
@@ -430,7 +438,7 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
     description: 'successful operation',
     content: {
       'application/json': {
-        schema: composeRef('schemas', componentName(collection.slug, { prefix: 'new' })),
+        schema: composeRef('get', 'schemas', componentName(collection.slug, { prefix: 'new' })),
       }
     }
   }
@@ -439,7 +447,7 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
     description: 'successful operation',
     content: {
       'application/json': {
-        schema: composeRef('schemas', collection.slug),
+        schema: composeRef('get', 'schemas', collection.slug),
       }
     }
   }
@@ -448,7 +456,7 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
     description: 'successful operation',
     content: {
       'application/json': {
-        schema: composeRef('schemas', collection.slug),
+        schema: composeRef('get', 'schemas', collection.slug),
       }
     }
   }
@@ -458,7 +466,7 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
     content: {
       'application/json': {
         schema: {
-          allOf: [composeRef('schemas', slug), composeRef('schemas', 'createResponse')],
+          allOf: [composeRef('get', 'schemas', slug), composeRef('get', 'schemas', 'createResponse')],
         },
       }
     }
@@ -476,11 +484,11 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
               properties: {
                 docs: {
                   type: 'array',
-                  items: composeRef('schemas', slug),
+                  items: composeRef('get', 'schemas', slug),
                 },
               },
             },
-            composeRef('schemas', 'paginationResponse'),
+            composeRef('get', 'schemas', 'paginationResponse'),
           ],
         },
       }
@@ -496,30 +504,30 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
       operationId: componentName(slug, { prefix: 'find' }),
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug, { suffix: 'list' }),
+        200: composeRef('get', 'responses', slug, { suffix: 'list' }),
       }
     },
     post: {
       operationId: componentName(slug, { prefix: 'create' }),
       tags: [slug],
-      requestBody: composeRef('requestBodies', slug, { prefix: 'new' }),
+      requestBody: composeRef('get', 'requestBodies', slug, { prefix: 'new' }),
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     },
     patch: {
       operationId: componentName(slug, { prefix: 'update' }),
       tags: [slug],
-      requestBody: composeRef('requestBodies', slug),
+      requestBody: composeRef('get', 'requestBodies', slug),
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     },
     delete: {
       operationId: componentName(slug, { prefix: 'delete' }),
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     }
   }
@@ -540,22 +548,22 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
       operationId: componentName(slug, { prefix: 'findById' }),
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     },
     patch: {
       operationId: componentName(slug, { prefix: 'updateById' }),
       tags: [slug],
-      requestBody: composeRef('requestBodies', slug),
+      requestBody: composeRef('get', 'requestBodies', slug),
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     },
     delete: {
       operationId: componentName(slug, { prefix: 'deleteById' }),
       tags: [slug],
       responses: {
-        200: composeRef('responses', slug),
+        200: composeRef('get', 'responses', slug),
       }
     }
   }
@@ -566,7 +574,7 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
       operationId: componentName(collection.slug, { prefix: 'count' }),
       tags: [collection.slug],
       responses: {
-        200: composeRef('responses', 'count'),
+        200: composeRef('get', 'responses', 'count'),
       }
     },
   }
@@ -653,18 +661,18 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
                   docs: {
                     type: 'array',
                     items: {
-                      oneOf: field.collection.map((collection) => composeRef('schemas', collection))
+                      oneOf: field.collection.map((collection) => composeRef(mode, 'schemas', collection))
                     }
                   },
                 },
               },
-              composeRef('schemas', 'paginationResponse'),
+              composeRef(mode, 'schemas', 'paginationResponse'),
             ],
           }
         }
 
         return {
-          oneOf: field.collection.map((collection) => composeRef('schemas', collection))
+          oneOf: field.collection.map((collection) => composeRef(mode, 'schemas', collection))
         }
       }
 
@@ -677,16 +685,16 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
               properties: {
                 docs: {
                   type: 'array',
-                  items: composeRef('schemas', field.collection),
+                  items: composeRef(mode, 'schemas', field.collection),
                 },
               },
             },
-            composeRef('schemas', 'paginationResponse'),
+            composeRef(mode, 'schemas', 'paginationResponse'),
           ],
         }
       }
 
-      return composeRef('schemas', field.collection)
+      return composeRef(mode, 'schemas', field.collection)
     case 'blocks':
       return {
         type: 'array',
@@ -726,17 +734,17 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
                   docs: {
                     type: 'array',
                     items: {
-                      oneOf: field.relationTo.map((relation) => composeRef('schemas', relation))
+                      oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation))
                     }
                   },
                 },
               },
-              composeRef('schemas', 'paginationResponse'),
+              composeRef(mode, 'schemas', 'paginationResponse'),
             ]
           }
         }
 
-        return { oneOf: field.relationTo.map((relation) => composeRef('schemas', relation)) }
+        return { oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation)) }
       }
 
       if (field.hasMany) {
@@ -748,16 +756,16 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
               properties: {
                 docs: {
                   type: 'array',
-                  items: composeRef('schemas', field.relationTo),
+                  items: composeRef(mode, 'schemas', field.relationTo),
                 },
               },
             },
-            composeRef('schemas', 'paginationResponse'),
+            composeRef(mode, 'schemas', 'paginationResponse'),
           ],
         }
       }
 
-      return composeRef('schemas', field.relationTo)
+      return composeRef(mode, 'schemas', field.relationTo)
     case 'row':
       return generateObject(mode, field.fields as (Field & FieldBase)[])
     case 'tabs':
