@@ -623,6 +623,10 @@ function generateObject(mode: 'new' | 'get', fields: (Field & FieldBase)[]): v3_
           return acc
         }
 
+        if (field.type === 'join' && mode === 'new') {
+          return acc
+        }
+
         return {
           type: 'object',
           required: acc.required || field.required ? [... new Set(field.required ? [...acc.required || [], field.name] : acc.required)] : undefined,
@@ -666,7 +670,7 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
                   },
                 },
               },
-              composeRef(mode, 'schemas', 'paginationResponse'),
+              composeRef('get', 'schemas', 'paginationResponse'),
             ],
           }
         }
@@ -689,7 +693,7 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
                 },
               },
             },
-            composeRef(mode, 'schemas', 'paginationResponse'),
+            composeRef('get', 'schemas', 'paginationResponse'),
           ],
         }
       }
@@ -723,49 +727,63 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
     case 'radio':
       return { type: 'string', enum: generateOptions(field.options) }
     case 'relationship':
-      if (Array.isArray(field.relationTo)) {
-        if (field.hasMany) {
-          return {
-            allOf: [
-              {
-                type: 'object',
-                required: ['docs'],
-                properties: {
-                  docs: {
-                    type: 'array',
-                    items: {
-                      oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation))
-                    }
+      switch (mode) {
+        case 'new':
+          if (Array.isArray(field.relationTo) || field.hasMany) {
+            return {
+              type: 'array',
+              items: {
+                type: 'string'
+              },
+            }
+          }
+
+          return { type: 'string' }
+        case 'get':
+          if (Array.isArray(field.relationTo)) {
+            if (field.hasMany) {
+              return {
+                allOf: [
+                  {
+                    type: 'object',
+                    required: ['docs'],
+                    properties: {
+                      docs: {
+                        type: 'array',
+                        items: {
+                          oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation))
+                        }
+                      },
+                    },
+                  },
+                  composeRef('get', 'schemas', 'paginationResponse'),
+                ]
+              }
+            }
+
+            return { oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation)) }
+          }
+
+          if (field.hasMany) {
+            return {
+              allOf: [
+                {
+                  type: 'object',
+                  required: ['docs'],
+                  properties: {
+                    docs: {
+                      type: 'array',
+                      items: composeRef(mode, 'schemas', field.relationTo),
+                    },
                   },
                 },
-              },
-              composeRef(mode, 'schemas', 'paginationResponse'),
-            ]
+                composeRef('get', 'schemas', 'paginationResponse'),
+              ],
+            }
           }
-        }
 
-        return { oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation)) }
+          return composeRef(mode, 'schemas', field.relationTo)
       }
-
-      if (field.hasMany) {
-        return {
-          allOf: [
-            {
-              type: 'object',
-              required: ['docs'],
-              properties: {
-                docs: {
-                  type: 'array',
-                  items: composeRef(mode, 'schemas', field.relationTo),
-                },
-              },
-            },
-            composeRef(mode, 'schemas', 'paginationResponse'),
-          ],
-        }
-      }
-
-      return composeRef(mode, 'schemas', field.relationTo)
     case 'row':
       return generateObject(mode, field.fields as (Field & FieldBase)[])
     case 'tabs':
