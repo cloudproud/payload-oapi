@@ -655,7 +655,23 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
       return { type: 'string', enum: generateOptions(field.options) }
     case 'relationship':
       if (Array.isArray(field.relationTo)) {
+        if (field.hasMany) {
+          return {
+            type: 'array',
+            items: {
+              oneOf: field.relationTo.map((relation) => composeRef('schemas', relation))
+            }
+          }
+        }
+
         return { oneOf: field.relationTo.map((relation) => composeRef('schemas', relation)) }
+      }
+
+      if (field.hasMany) {
+        return {
+          type: 'array',
+          items: composeRef('schemas', field.relationTo),
+        }
       }
 
       return composeRef('schemas', field.relationTo)
