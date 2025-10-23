@@ -652,6 +652,13 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
     case 'array':
       return { type: 'array', items: generateObject(mode, field.fields as (Field & FieldBase)[]) }
     case 'select':
+      if (field.hasMany) {
+        return {
+          type: 'array',
+          items: { type: 'string', enum: generateOptions(field.options) }
+        }
+      }
+
       return { type: 'string', enum: generateOptions(field.options) }
     case 'join':
       if (Array.isArray(field.collection)) {
