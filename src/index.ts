@@ -622,10 +622,21 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
       if (Array.isArray(field.collection)) {
         if (field.hasMany) {
           return {
-            type: 'array',
-            items: {
-              oneOf: field.collection.map((collection) => composeRef('schemas', collection))
-            }
+            allOf: [
+              {
+                type: 'object',
+                required: ['docs'],
+                properties: {
+                  docs: {
+                    type: 'array',
+                    items: {
+                      oneOf: field.collection.map((collection) => composeRef('schemas', collection))
+                    }
+                  },
+                },
+              },
+              composeRef('schemas', 'paginationResponse'),
+            ],
           }
         }
 
@@ -636,8 +647,19 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
 
       if (field.hasMany) {
         return {
-          type: 'array',
-          items: composeRef('schemas', field.collection),
+          allOf: [
+            {
+              type: 'object',
+              required: ['docs'],
+              properties: {
+                docs: {
+                  type: 'array',
+                  items: composeRef('schemas', field.collection),
+                },
+              },
+            },
+            composeRef('schemas', 'paginationResponse'),
+          ],
         }
       }
 
@@ -673,10 +695,21 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
       if (Array.isArray(field.relationTo)) {
         if (field.hasMany) {
           return {
-            type: 'array',
-            items: {
-              oneOf: field.relationTo.map((relation) => composeRef('schemas', relation))
-            }
+            allOf: [
+              {
+                type: 'object',
+                required: ['docs'],
+                properties: {
+                  docs: {
+                    type: 'array',
+                    items: {
+                      oneOf: field.relationTo.map((relation) => composeRef('schemas', relation))
+                    }
+                  },
+                },
+              },
+              composeRef('schemas', 'paginationResponse'),
+            ]
           }
         }
 
@@ -685,8 +718,19 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
 
       if (field.hasMany) {
         return {
-          type: 'array',
-          items: composeRef('schemas', field.relationTo),
+          allOf: [
+            {
+              type: 'object',
+              required: ['docs'],
+              properties: {
+                docs: {
+                  type: 'array',
+                  items: composeRef('schemas', field.relationTo),
+                },
+              },
+            },
+            composeRef('schemas', 'paginationResponse'),
+          ],
         }
       }
 
