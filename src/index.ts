@@ -185,7 +185,7 @@ function generateCustomEndpointOperators(document: v3_1.Document, base: string, 
 }
 
 function generateUploadCollectionOperators(document: v3_1.Document, collection: CollectionConfig) {
-  const object = generateObject(collection.fields as (Field & FieldBase)[])
+  const object = generateObject('get', collection.fields as (Field & FieldBase)[])
   const { slug } = collection
 
   document.components!.schemas![componentName(slug)] = {
@@ -338,7 +338,7 @@ function generateUploadCollectionOperators(document: v3_1.Document, collection: 
 }
 
 function generateGlobalOperators(document: v3_1.Document, global: GlobalConfig) {
-  const object = generateObject(global.fields as (Field & FieldBase)[])
+  const object = generateObject('get', global.fields as (Field & FieldBase)[])
   const { slug } = global
 
   document.components!.schemas![componentName(slug, { prefix: 'global' })] = {
@@ -398,8 +398,19 @@ function generateGlobalOperators(document: v3_1.Document, global: GlobalConfig) 
 }
 
 function generateCollectionOperators(document: v3_1.Document, collection: CollectionConfig) {
-  const object = generateObject(collection.fields as (Field & FieldBase)[])
+  const newObject = generateObject('new', collection.fields as (Field & FieldBase)[])
+  const object = generateObject('get', collection.fields as (Field & FieldBase)[])
   const { slug } = collection
+
+  document.components!.schemas![componentName(slug, { prefix: 'new' })] = {
+    type: 'object',
+    required: [... new Set([
+      ...newObject.required || [],
+    ])],
+    properties: {
+      ...newObject.properties,
+    },
+  }
 
   document.components!.schemas![componentName(slug)] = {
     type: 'object',
@@ -419,7 +430,7 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
     description: 'successful operation',
     content: {
       'application/json': {
-        schema: composeRef('schemas', collection.slug),
+        schema: composeRef('schemas', componentName(collection.slug, { prefix: 'new' })),
       }
     }
   }
@@ -561,7 +572,7 @@ function generateCollectionOperators(document: v3_1.Document, collection: Collec
   }
 }
 
-function generateObject(fields: (Field & FieldBase)[]): v3_1.SchemaObject {
+function generateObject(mode: 'new' | 'get', fields: (Field & FieldBase)[]): v3_1.SchemaObject {
   return fields.reduce<v3_1.SchemaObject>((acc, field) => {
     switch (field.type) {
       case 'tabs':
@@ -572,12 +583,12 @@ function generateObject(fields: (Field & FieldBase)[]): v3_1.SchemaObject {
 
         for (const tab of field.tabs) {
           if (tab.interfaceName) {
-            result.properties![tab.interfaceName] = generateObject(tab.fields as (Field & FieldBase)[])
+            result.properties![tab.interfaceName] = generateObject(mode, tab.fields as (Field & FieldBase)[])
 
             continue
           }
 
-          result.properties![field.name] = generateObject(field.tabs.flatMap((tab) => tab.fields as (Field & FieldBase)[]))
+          result.properties![field.name] = generateObject(mode, field.tabs.flatMap((tab) => tab.fields as (Field & FieldBase)[]))
         }
 
         return {
@@ -592,19 +603,31 @@ function generateObject(fields: (Field & FieldBase)[]): v3_1.SchemaObject {
         // NOTE: ignore ui field
         return acc
       default:
+        if (field.hidden) {
+          return acc
+        }
+
+        if (mode === 'new' && ['id', 'createdAt', 'updatedAt'].includes(field.name)) {
+          return acc
+        }
+
+        if (mode === 'new' && field.virtual) {
+          return acc
+        }
+
         return {
           type: 'object',
           required: acc.required || field.required ? [... new Set(field.required ? [...acc.required || [], field.name] : acc.required)] : undefined,
           properties: {
             ...acc.properties,
-            [field.name]: generateField(field),
+            [field.name]: generateField(mode, field),
           }
         }
     }
   }, {})
 }
 
-function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
+function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
   switch (field.type) {
     case 'text':
       return { type: 'string' }
@@ -615,7 +638,7 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
     case 'number':
       return { type: 'number' }
     case 'array':
-      return { type: 'array', items: generateObject(field.fields as (Field & FieldBase)[]) }
+      return { type: 'array', items: generateObject(mode, field.fields as (Field & FieldBase)[]) }
     case 'select':
       return { type: 'string', enum: generateOptions(field.options) }
     case 'join':
@@ -668,7 +691,7 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
       return {
         type: 'array',
         items: {
-          anyOf: field.blocks.map((block) => generateObject(block.fields as (Field & FieldBase)[]))
+          anyOf: field.blocks.map((block) => generateObject(mode, block.fields as (Field & FieldBase)[]))
         }
       }
     case 'checkbox':
@@ -681,7 +704,7 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
     case 'email':
       return { type: 'string', format: 'email' }
     case 'group':
-      return generateObject(field.fields as (Field & FieldBase)[])
+      return generateObject(mode, field.fields as (Field & FieldBase)[])
     case 'json':
       return { type: 'object' }
     case 'upload':
@@ -736,7 +759,7 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
 
       return composeRef('schemas', field.relationTo)
     case 'row':
-      return generateObject(field.fields as (Field & FieldBase)[])
+      return generateObject(mode, field.fields as (Field & FieldBase)[])
     case 'tabs':
       throw new Error('tabs should be flattened')
     case 'ui':
