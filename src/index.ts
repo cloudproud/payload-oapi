@@ -1,4 +1,4 @@
-import type { Config, Option, Field, FieldBase, CollectionConfig, GlobalConfig } from 'payload';
+import type { Config, Option, Field, FieldBase, CollectionConfig, GlobalConfig, JoinField, RelationshipField } from 'payload';
 import { OpenAPIV3_1 as v3_1 } from 'openapi-types'
 
 import fs from 'fs'
@@ -661,51 +661,16 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
 
       return { type: 'string', enum: generateOptions(field.options) }
     case 'join':
-      if (Array.isArray(field.collection)) {
-        if (field.hasMany) {
-          return {
-            allOf: [
-              {
-                type: 'object',
-                required: ['docs'],
-                properties: {
-                  docs: {
-                    type: 'array',
-                    items: {
-                      oneOf: field.collection.map((collection) => composeRef(mode, 'schemas', collection))
-                    }
-                  },
-                },
-              },
-              composeRef('get', 'schemas', 'paginationResponse'),
-            ],
+      const join = generateJoin(mode, field)
+      return {
+        oneOf: [
+          join,
+          {
+            type: 'string',
+            description: 'the ID of the joined document',
           }
-        }
-
-        return {
-          oneOf: field.collection.map((collection) => composeRef(mode, 'schemas', collection))
-        }
+        ]
       }
-
-      if (field.hasMany) {
-        return {
-          allOf: [
-            {
-              type: 'object',
-              required: ['docs'],
-              properties: {
-                docs: {
-                  type: 'array',
-                  items: composeRef(mode, 'schemas', field.collection),
-                },
-              },
-            },
-            composeRef('get', 'schemas', 'paginationResponse'),
-          ],
-        }
-      }
-
-      return composeRef(mode, 'schemas', field.collection)
     case 'blocks':
       return {
         type: 'array',
@@ -734,62 +699,15 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
     case 'radio':
       return { type: 'string', enum: generateOptions(field.options) }
     case 'relationship':
-      switch (mode) {
-        case 'new':
-          if (Array.isArray(field.relationTo) || field.hasMany) {
-            return {
-              type: 'array',
-              items: {
-                type: 'string'
-              },
-            }
+      const relationship = generateRelationship(mode, field)
+      return {
+        oneOf: [
+          relationship,
+          {
+            type: 'string',
+            description: 'the ID of the joined document',
           }
-
-          return { type: 'string' }
-        case 'get':
-          if (Array.isArray(field.relationTo)) {
-            if (field.hasMany) {
-              return {
-                allOf: [
-                  {
-                    type: 'object',
-                    required: ['docs'],
-                    properties: {
-                      docs: {
-                        type: 'array',
-                        items: {
-                          oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation))
-                        }
-                      },
-                    },
-                  },
-                  composeRef('get', 'schemas', 'paginationResponse'),
-                ]
-              }
-            }
-
-            return { oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation)) }
-          }
-
-          if (field.hasMany) {
-            return {
-              allOf: [
-                {
-                  type: 'object',
-                  required: ['docs'],
-                  properties: {
-                    docs: {
-                      type: 'array',
-                      items: composeRef(mode, 'schemas', field.relationTo),
-                    },
-                  },
-                },
-                composeRef('get', 'schemas', 'paginationResponse'),
-              ],
-            }
-          }
-
-          return composeRef(mode, 'schemas', field.relationTo)
+        ]
       }
     case 'row':
       return generateObject(mode, field.fields as (Field & FieldBase)[])
@@ -797,6 +715,114 @@ function generateField(mode: 'new' | 'get', field: Field): v3_1.SchemaObject | v
       throw new Error('tabs should be flattened')
     case 'ui':
       throw new Error('ui should be ignored')
+  }
+}
+
+function generateJoin(mode: 'new' | 'get', field: JoinField): v3_1.SchemaObject | v3_1.ReferenceObject {
+  if (Array.isArray(field.collection)) {
+    if (field.hasMany) {
+      return {
+        allOf: [
+          {
+            type: 'object',
+            required: ['docs'],
+            properties: {
+              docs: {
+                type: 'array',
+                items: {
+                  oneOf: field.collection.map((collection) => composeRef(mode, 'schemas', collection))
+                }
+              },
+            },
+          },
+          composeRef('get', 'schemas', 'paginationResponse'),
+        ],
+      }
+    }
+
+    return {
+      oneOf: field.collection.map((collection) => composeRef(mode, 'schemas', collection))
+    }
+  }
+
+  if (field.hasMany) {
+    return {
+      allOf: [
+        {
+          type: 'object',
+          required: ['docs'],
+          properties: {
+            docs: {
+              type: 'array',
+              items: composeRef(mode, 'schemas', field.collection),
+            },
+          },
+        },
+        composeRef('get', 'schemas', 'paginationResponse'),
+      ],
+    }
+  }
+
+  return composeRef(mode, 'schemas', field.collection)
+}
+
+function generateRelationship(mode: 'new' | 'get', field: RelationshipField): v3_1.SchemaObject | v3_1.ReferenceObject {
+  switch (mode) {
+    case 'new':
+      if (Array.isArray(field.relationTo) || field.hasMany) {
+        return {
+          type: 'array',
+          items: {
+            type: 'string'
+          },
+        }
+      }
+
+      return { type: 'string' }
+    case 'get':
+      if (Array.isArray(field.relationTo)) {
+        if (field.hasMany) {
+          return {
+            allOf: [
+              {
+                type: 'object',
+                required: ['docs'],
+                properties: {
+                  docs: {
+                    type: 'array',
+                    items: {
+                      oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation))
+                    }
+                  },
+                },
+              },
+              composeRef('get', 'schemas', 'paginationResponse'),
+            ]
+          }
+        }
+
+        return { oneOf: field.relationTo.map((relation) => composeRef(mode, 'schemas', relation)) }
+      }
+
+      if (field.hasMany) {
+        return {
+          allOf: [
+            {
+              type: 'object',
+              required: ['docs'],
+              properties: {
+                docs: {
+                  type: 'array',
+                  items: composeRef(mode, 'schemas', field.relationTo),
+                },
+              },
+            },
+            composeRef('get', 'schemas', 'paginationResponse'),
+          ],
+        }
+      }
+
+      return composeRef(mode, 'schemas', field.relationTo)
   }
 }
 
