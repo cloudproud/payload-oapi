@@ -620,8 +620,24 @@ function generateField(field: Field): v3_1.SchemaObject | v3_1.ReferenceObject {
       return { type: 'string', enum: generateOptions(field.options) }
     case 'join':
       if (Array.isArray(field.collection)) {
+        if (field.hasMany) {
+          return {
+            type: 'array',
+            items: {
+              oneOf: field.collection.map((collection) => composeRef('schemas', collection))
+            }
+          }
+        }
+
         return {
           oneOf: field.collection.map((collection) => composeRef('schemas', collection))
+        }
+      }
+
+      if (field.hasMany) {
+        return {
+          type: 'array',
+          items: composeRef('schemas', field.collection),
         }
       }
 
